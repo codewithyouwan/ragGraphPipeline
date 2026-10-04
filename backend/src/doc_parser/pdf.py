@@ -48,8 +48,12 @@ class PdfParser(DocumentParser):
         *,
         include_page_headers: bool = False,
         include_page_footers: bool = False,
+        ocr: bool = False,
     ) -> None:
         super().__init__(limits)
+        # OCR is off by default: it is ~100x slower per page. When on, pymupdf4llm
+        # OCRs only the pages its own decision model finds to need it.
+        self.ocr = ocr
         # Running headers/footers ("Confidential", "Page 3 of 40") repeat on every page.
         # They add noise to retrieval and break content hashing, so they're dropped by default.
         self.include_page_headers = include_page_headers
@@ -82,7 +86,7 @@ class PdfParser(DocumentParser):
                 page_chunks = pymupdf4llm.to_markdown(
                     doc,
                     page_chunks=True,
-                    use_ocr=False,  # no OCR engine yet; scanned pages are reported as warnings
+                    use_ocr=self.ocr,  # OCRs only pages that need it; off = warn instead
                     header=self.include_page_headers,
                     footer=self.include_page_footers,
                     show_progress=False,
@@ -92,9 +96,8 @@ class PdfParser(DocumentParser):
 
         markdown, pages, blocks, warnings = _assemble(page_chunks, page_sizes)
         if not markdown.strip():
-            raise NoExtractableTextError(
-                f"{path.name} has no extractable text (likely a scanned PDF; OCR is not enabled)"
-            )
+            hint = "" if self.ocr else "; retry with ocr=True"
+            raise NoExtractableTextError(f"{path.name} has no extractable text{hint}")
 
         return ParsedDocument(
             source=source,
@@ -103,7 +106,7 @@ class PdfParser(DocumentParser):
                 version=pymupdf4llm.__version__,
                 options={
                     "layout": True,
-                    "ocr": False,
+                    "ocr": self.ocr,
                     "include_page_headers": self.include_page_headers,
                     "include_page_footers": self.include_page_footers,
                 },

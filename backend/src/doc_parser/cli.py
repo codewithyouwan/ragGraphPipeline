@@ -20,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
         ParseLimits(max_file_bytes=int(args.max_mb * 1_048_576), max_pages=args.max_pages),
         include_page_headers=args.keep_headers,
         include_page_footers=args.keep_footers,
+        ocr=args.ocr,
     )
 
     files = _collect_files(args.paths, registry)
@@ -65,6 +66,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--force", action="store_true", help="re-parse files already parsed")
     parser.add_argument("--max-mb", type=float, default=50, help="max file size in MB (default: 50)")
     parser.add_argument("--max-pages", type=int, default=500, help="max pages (default: 500)")
+    parser.add_argument("--ocr", action="store_true", help="OCR pages with no text layer")
     parser.add_argument("--keep-headers", action="store_true", help="keep running page headers")
     parser.add_argument("--keep-footers", action="store_true", help="keep running page footers")
     return parser

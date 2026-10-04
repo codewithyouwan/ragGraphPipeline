@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "pymupdf4llm>=1.28.2",
+    "rapidocr>=3.9.2",
 ]
 
 [project.scripts]
@@ -25,4 +26,5 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["ocr: needs the OCR engine (slow, downloads models on first run)"]
 filterwarnings = ["ignore:builtin type .* has no __module__ attribute:DeprecationWarning"]

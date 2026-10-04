@@ -144,3 +144,29 @@ def test_page_limit(make_pdf):
 )
 def test_parse_pdf_date(raw, expected):
     assert parse_pdf_date(raw) == expected
+
+
+def _scanned_pdf(source, target):
+    """Rasterize a PDF so it has images but no text layer (like a scan)."""
+    scanned = pymupdf.open()
+    with pymupdf.open(source) as doc:
+        for page in doc:
+            pix = page.get_pixmap(dpi=150)
+            new = scanned.new_page(width=page.rect.width, height=page.rect.height)
+            new.insert_image(new.rect, pixmap=pix)
+    scanned.save(target)
+    scanned.close()
+    return target
+
+
+@pytest.mark.ocr
+def test_ocr_reads_scanned_pages(make_pdf, tmp_path):
+    scanned = _scanned_pdf(make_pdf(pages=1), tmp_path / "scanned.pdf")
+
+    with pytest.raises(NoExtractableTextError, match="retry with ocr=True"):
+        PdfParser().parse(scanned)
+
+    parsed = PdfParser(ocr=True).parse(scanned)
+    assert "Section 1" in parsed.markdown
+    assert "quarterly results" in parsed.markdown
+    assert parsed.parser.options["ocr"] is True
